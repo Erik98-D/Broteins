@@ -9,6 +9,79 @@ from tkinter.ttk import *
 from tkinter import messagebox
 from datetime import datetime
 import time
+import pandas as pd
+
+
+
+class Compear():
+    def __init__(self,string1,string2):
+        self.str1 = string1.get().upper()
+        self.str2 = string2.get().upper()
+        self.minnumber = 3 #give by Lorenso
+        self.strsplit = []
+        
+        #Assuming heare everithing is alphabet letters only
+        
+        #dictionary definition
+        """ migth be not good since we need to change the code a lot for this 
+            but can be use to split the short string instead that the 1st 
+        if len(self.str1)<len(self.str2):
+            print("str2 bigger...")
+            for i in range(len(self.str1)-self.minnumber):
+                self.strsplit.append(self.str1[i:i+self.minnumber])
+        else:
+            print("str1 is bigger or same size...")
+            for i in range(len(self.str2)-self.minnumber):
+                self.strsplit.append(self.str2[i:i+self.minnumber])
+        """
+        #split 1st string in the minnumber (3) exmp in "ABCD" 
+        # out "ABC" and "BCD"
+        for i in range(len(self.str1)-self.minnumber+1):
+            self.strsplit.append(self.str1[i:i+self.minnumber])
+            
+        r=0
+        df=pd.DataFrame(columns=["Match","Iidx", "Fidx","Origiidx","Origfidx"])
+        
+        #here we find all the exact matches and we save them to a df
+        for i in range(len( self.strsplit)):
+            while(r<len(self.str2)-self.minnumber and r!=-1):
+                r=self.str2.find(self.strsplit[i],r)
+                if r != -1:
+                    df=df.append({"Match":self.strsplit[i],
+                    "Iidx":r,"Fidx":r+self.minnumber-1,"Origiidx":i,"Origfidx":i+self.minnumber-1},ignore_index=True)
+                    r+=1
+
+            r=0
+        print("Untill heart the df hass all the 3 exact matches")
+        self.df=df
+        print(df)
+        
+        
+    def extend_final_idx(self):
+        for i in range(self.df.shape[0]):
+            iidx=self.df.iloc[i][1]
+            fidx=self.df.iloc[i][2] #final index location
+            oidx=self.df.iloc[i][3]
+            ad=self.minnumber
+            #sumand=0
+            f=(oidx+1)+ad #add one to companeste chacking
+            g=(fidx+2)
+            while(f<len(self.str1)):
+                
+                if(self.str1[oidx:f]==self.str2[iidx:g]):
+                    self.df.loc[i,"Fidx"]=g-1
+                    self.df.loc[i,"Origfidx"]=f-1
+                    self.df.loc[i,"Match"]=self.str1[oidx:f]
+                    f+=1
+                    if g<len(self.str2):
+                        g+=1
+                else:
+                    break
+            
+        print("Matches with extended index are:")
+        print(self.df)
+    def extend_initial_idx(self):
+        return self.str1
 
 
 # In[2]:
@@ -142,6 +215,8 @@ class GUI():
         """
         here we compare the proteins and update the task bar
         """
+        a=Compear(self.String1,self.String2)
+        a.extend_final_idx()
         x=0
         while (x<10):
             self.bar['value']+=10
@@ -192,13 +267,13 @@ a.startgui()
 # In[11]:
 
 
-a.printinfo()
+#a.printinfo()
 
 
 # In[5]:
 
 
-help(GUI)
+#help(GUI)
 
 
 # In[6]:
@@ -224,5 +299,6 @@ for p in document.paragraphs:
 # In[ ]:
 
 
+    
 
 
