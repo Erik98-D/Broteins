@@ -16,7 +16,7 @@ from docx.enum.text import WD_COLOR_INDEX
 
 
 class Compear():
-    def __init__(self,string1,string2):
+    def __init__(self,string1,string2,Output_name):
         self.str1 = string1.get().upper()
         self.str2 = string2.get().upper()
         self.minnumber = 3 #give by Lorenso
@@ -24,6 +24,8 @@ class Compear():
         self.doc = docx.Document()
         self.AminoTable={"A":1,"G":1,"I":2,"L":2,"V":2,"M":3,"F":4,"W":4,"Y":4,\
                          "N":5,"D":5,"Q":5,"E":5,"C":6,"S":6,"T":6,"R":7,"K":7,"H":8,"P":9}
+        
+        
         
         #Assuming heare everithing is alphabet letters only
         
@@ -67,7 +69,7 @@ class Compear():
         self.mark_strings_in_word(df_final,self.doc)
         
         #save still in test
-        self.Save_word_doc("Erik_Test",self.doc)
+        self.Save_word_doc(Output_name,self.doc)
         
         
         
@@ -97,9 +99,6 @@ class Compear():
         print(self.df)
         
         
-        
-    def extend_initial_idx(self):  #I think we can remove this
-        return self.str1
     
     def write_df_to_doc(self,df,doc): 
         """
@@ -209,8 +208,12 @@ class Compear():
         None.
 
         """
+        # here will need to sort the index
+        
+        
         p1 = doc.add_paragraph("Protein #1:")
-        sim_para = doc.add_paragraph(self.str1)
+        sim_para = doc.add_paragraph(self.str1[:df.loc[i,"Initial_idx"]])
+        
         for i in range(df.shape[0]):
             if ( df.loc[i,"Exact_match"] != 1):
                 sim_para.add_run(self.str1[ df.loc[i,"Initial_idx"]:\
@@ -229,6 +232,8 @@ class Compear():
                 sim_para.add_run(self.str2[ df.loc[i,"Initial_idx1"]:\
                 df.loc[i,"Final_idx1"]]).font.highlight_color = WD_COLOR_INDEX.GREEN
 
+    
+        
 
 class GUI():
     def __init__(self):
@@ -358,15 +363,19 @@ class GUI():
         """
         here we compare the proteins and update the task bar
         """
-        a=Compear(self.String1,self.String2)
+        
+        #String check
+        
+        a=Compear(self.String1,self.String2,self.outText.get())
+        self.bar['value']+=50
+        self.window.update_idletasks()
         a.extend_final_idx()
-        x=0
+        x=5
         while (x<10):
             self.bar['value']+=10
             time.sleep(1)
             x+=1
             self.window.update_idletasks()
-
         self.mesagefinish()
 
 
@@ -393,7 +402,32 @@ class GUI():
         print("Default Name: "+str(self.name)+"\n")
         print("String1     : "+str(self.String1.get())+"\n")
         print("String2     : "+str(self.String2.get())+"\n")
+        
+    def string_preper(self):
+        """
+        Preper the strings to be compear
 
+        Returns
+        -------
+        None.
+
+        """
+        self.String1.get().upper()
+        self.String2.get().upper()
+        
+        if (self.String1.get().isalpha()== False or self.String2.get().isalpha()==False):
+            #display warning that text not only contain letters
+        
+        #exept letters
+        exep = ['B', 'J', 'O', 'U', 'X', 'Z']
+    
+        for i in exep:
+            x = i in self.String1
+            y = i in self.String2
+            if (x == True or y == True):
+                #stop ptogram and say is a letter that dont have a protein associet with 
+                # it
+        
 
 
 
