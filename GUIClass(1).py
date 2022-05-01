@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
 
 
 from tkinter import *
@@ -11,6 +10,9 @@ from datetime import datetime
 import time
 import pandas as pd
 
+import docx 
+from docx.enum.text import WD_COLOR_INDEX
+
 
 
 class Compear():
@@ -19,33 +21,34 @@ class Compear():
         self.str2 = string2.get().upper()
         self.minnumber = 3 #give by Lorenso
         self.strsplit = []
+        self.doc = docx.Document()
+        self.AminoTable={"A":1,"G":1,"I":2,"L":2,"V":2,"M":3,"F":4,"W":4,"Y":4,\
+                         "N":5,"D":5,"Q":5,"E":5,"C":6,"S":6,"T":6,"R":7,"K":7,"H":8,"P":9}
         
         #Assuming heare everithing is alphabet letters only
         
-        #dictionary definition
-        """ migth be not good since we need to change the code a lot for this 
-            but can be use to split the short string instead that the 1st 
-        if len(self.str1)<len(self.str2):
-            print("str2 bigger...")
-            for i in range(len(self.str1)-self.minnumber):
-                self.strsplit.append(self.str1[i:i+self.minnumber])
-        else:
-            print("str1 is bigger or same size...")
-            for i in range(len(self.str2)-self.minnumber):
-                self.strsplit.append(self.str2[i:i+self.minnumber])
-        """
+        self.str1_n=self.Protein_to_number(self.str1)
+        self.str2_n=self.Protein_to_number(self.str2)
+        
+        
+        self.Word_document_init(self.doc)
+        
+        
         #split 1st string in the minnumber (3) exmp in "ABCD" 
         # out "ABC" and "BCD"
-        for i in range(len(self.str1)-self.minnumber+1):
-            self.strsplit.append(self.str1[i:i+self.minnumber])
+        for i in range(len(self.str1_n)-self.minnumber+1):
+            self.strsplit.append(self.str1_n[i:i+self.minnumber])
             
         r=0
+        # Iidx and Fidx belong to str2
         df=pd.DataFrame(columns=["Match","Iidx", "Fidx","Origiidx","Origfidx"])
+        
+        
         
         #here we find all the exact matches and we save them to a df
         for i in range(len( self.strsplit)):
-            while(r<len(self.str2)-self.minnumber and r!=-1):
-                r=self.str2.find(self.strsplit[i],r)
+            while(r<len(self.str2_n)-self.minnumber and r!=-1):
+                r=self.str2_n.find(self.strsplit[i],r)
                 if r != -1:
                     df=df.append({"Match":self.strsplit[i],
                     "Iidx":r,"Fidx":r+self.minnumber-1,"Origiidx":i,"Origfidx":i+self.minnumber-1},ignore_index=True)
@@ -55,6 +58,18 @@ class Compear():
         print("Untill heart the df hass all the 3 exact matches")
         self.df=df
         print(df)
+        df_final = self.Number_to_protein(df,self.str1,self.str2)
+        print(df_final)
+        
+        
+        self.write_df_to_doc(df_final,self.doc)
+        
+        self.mark_strings_in_word(df_final,self.doc)
+        
+        #save still in test
+        self.Save_word_doc("Erik_Test",self.doc)
+        
+        
         
         
     def extend_final_idx(self):
@@ -80,11 +95,139 @@ class Compear():
             
         print("Matches with extended index are:")
         print(self.df)
-    def extend_initial_idx(self):
+        
+        
+        
+    def extend_initial_idx(self):  #I think we can remove this
         return self.str1
+    
+    def write_df_to_doc(self,df,doc): 
+        """
+        Write a Data frame to the word document
+        
+        Atributes:
+            df: dataframe
+            doc: word document using docx library
+        Return:
+            None, changes made to the word document
+        """
+        t = doc.add_table(df.shape[0]+1,df.shape[1])
+        #add header rows
+        for j in range(df.shape[-1]):
+            t.cell(0, j).text = df.columns[j]
+        #add the rest of the data frame
+        for i in range(df.shape[0]):
+            for j in range(df.shape[-1]):
+                t.cell(i+1, j).text = str(df.values[i, j])
+              
+    def Protein_to_number(self, string):
+        """
+        This will conbert the string to a specific grop of proteins for example
+            A is similar to G they will both be define as 1
+            
+        """
+        st=""
+        for i in string:
+            st+=str(self.AminoTable[i])
+            
+        return st
+    
+    def Number_to_protein(self,df,st1,st2):
+        """
+        Combert the input numpy array back to protein gormat givving a clear mattching 
+        of the proteins with index 
+        
+        Parameters
+        ----------
+        df : Data Frame
+            this will contain the matching string, initian anf final index of 
+            the match in both strings
+        st1 : String 1 
+            input for the user
+        st2 : String 2
+            input for the user
 
+        Returns
+        -------
+        Df with the all the matches and indexes
 
-# In[2]:
+        """
+        df2=pd.DataFrame(columns=["String1","Initial_idx","Final_idx", "String2","Initial_idx1",\
+                                  "Final_idx1","Exact_match"])
+        
+        for i in range(df.shape[0]):
+            idx1=df.loc[i,"Origiidx"]
+            idx2=df.loc[i,"Origfidx"]
+            idx3=df.loc[i,"Iidx"]
+            idx4=df.loc[i,"Fidx"]
+            
+            df2.loc[i,"String1"]=self.str1[idx1:idx2+1]
+            df2.loc[i,"Initial_idx"]=idx1
+            df2.loc[i,"Final_idx"]=idx2
+            df2.loc[i,"String2"]=self.str2[idx3:idx4+1]
+            df2.loc[i,"Initial_idx1"]=idx3
+            df2.loc[i,"Final_idx1"]=idx4
+            if (self.str1[idx1:idx2+1]==self.str2[idx3:idx4+1]): #if st1 == st2 is a exact match so 1
+                df2.loc[i,"Exact_match"]=1
+            else:
+                df2.loc[i,"Exact_match"]=0
+            
+        return df2
+    
+    def Save_word_doc (self,Title,doc):
+        doc.save(Title+'.docx')
+    
+    def Word_document_init(self,doc):
+      # add heading
+      doc.add_heading('Comparison Outcome', 0)
+      # add paragraph
+      para = doc.add_paragraph(
+          "Original Sequence: " + self.str1
+      )
+      para0 = doc.add_paragraph(
+          "Comparison Sequence: " + self.str2
+      )
+      para1 = doc.add_paragraph(
+          "The following sequence will have the identical and similar sequences of the Comparison Sequence"
+          "highlighted. SIMILAR SEQUENCES: PINK HIGHLIGHT   IDENTICAL SEQUENCES: GREEN HIGHLIGHT"
+      )
+      
+      
+    def mark_strings_in_word(self,df,doc):
+        """
+        Write and higligth the strings in the word document
+        
+        Parameters
+        ----------
+        df : Pandas DataFrame
+            Contain the index that march in both strings
+        doc : Word Document 
+            Document where we store all the strinfs
+
+        Returns
+        -------
+        None.
+
+        """
+        p1 = doc.add_paragraph("Protein #1:")
+        sim_para = doc.add_paragraph(self.str1)
+        for i in range(df.shape[0]):
+            if ( df.loc[i,"Exact_match"] != 1):
+                sim_para.add_run(self.str1[ df.loc[i,"Initial_idx"]:\
+                df.loc[i,"Final_idx"]]).font.highlight_color = WD_COLOR_INDEX.PINK
+            else:
+                sim_para.add_run(self.str1[ df.loc[i,"Initial_idx"]:\
+                df.loc[i,"Final_idx"]]).font.highlight_color = WD_COLOR_INDEX.GREEN
+        
+        p2 =  doc.add_paragraph("Protein #2:")
+        sim_para = doc.add_paragraph(self.str2)
+        for i in range(df.shape[0]):
+            if ( df.loc[i,"Exact_match"] != 1):
+                sim_para.add_run(self.str2[df.loc[i,"Initial_idx1"]:\
+                df.loc[i,"Final_idx1"]]).font.highlight_color = WD_COLOR_INDEX.PINK
+            else:
+                sim_para.add_run(self.str2[ df.loc[i,"Initial_idx1"]:\
+                df.loc[i,"Final_idx1"]]).font.highlight_color = WD_COLOR_INDEX.GREEN
 
 
 class GUI():
@@ -252,53 +395,15 @@ class GUI():
         print("String2     : "+str(self.String2.get())+"\n")
 
 
-# In[3]:
 
 
 a=GUI()
 
 
-# In[4]:
 
 
 a.startgui()
 
 
-# In[11]:
-
-
-#a.printinfo()
-
-
-# In[5]:
-
-
-#help(GUI)
-
-
-# In[6]:
-
-
-from docx import Document
-from docx.text.run import Font, Run
-
-
-# In[7]:
-
-
-document = Document('Test.docx')
-
-
-# In[10]:
-
-
-for p in document.paragraphs:
-    print(p.text)
-
-
-# In[ ]:
-
-
-    
 
 
